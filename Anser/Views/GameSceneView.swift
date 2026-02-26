@@ -53,29 +53,46 @@ class GameSceneController: NSObject {
     }
     
     private func setupLighting() {
-        // 环境光
+        // 环境光 - 提供基础照明
         let ambientLight = SCNNode()
         ambientLight.light = SCNLight()
         ambientLight.light?.type = .ambient
-        ambientLight.light?.intensity = 500
+        ambientLight.light?.color = UIColor(white: 1.0, alpha: 1.0)
+        ambientLight.light?.intensity = 800
         scene.rootNode.addChildNode(ambientLight)
         
-        // 方向光（主光源）
-        let directionalLight = SCNNode()
-        directionalLight.light = SCNLight()
-        directionalLight.light?.type = .directional
-        directionalLight.position = SCNVector3(5, 10, 5)
-        directionalLight.eulerAngles = SCNVector3(-Float.pi/3, Float.pi/4, 0)
-        directionalLight.light?.intensity = 1000
-        scene.rootNode.addChildNode(directionalLight)
+        // 主光源 - 方向光（模拟阳光）
+        let mainLight = SCNNode()
+        mainLight.light = SCNLight()
+        mainLight.light?.type = .directional
+        mainLight.light?.color = UIColor(white: 1.0, alpha: 1.0)
+        mainLight.light?.intensity = 1500
+        mainLight.light?.castsShadow = true
+        mainLight.position = SCNVector3(8, 12, 8)
+        mainLight.eulerAngles = SCNVector3(-Float.pi/3, Float.pi/5, 0)
+        scene.rootNode.addChildNode(mainLight)
         
-        // 补光
+        // 补光 - 填充阴影
         let fillLight = SCNNode()
         fillLight.light = SCNLight()
         fillLight.light?.type = .omni
-        fillLight.position = SCNVector3(-5, 5, -5)
-        fillLight.light?.intensity = 300
+        fillLight.light?.color = UIColor(white: 0.9, alpha: 1.0)
+        fillLight.light?.intensity = 600
+        fillLight.position = SCNVector3(-6, 6, -6)
         scene.rootNode.addChildNode(fillLight)
+        
+        // 轮廓光 - 增加立体感
+        let rimLight = SCNNode()
+        rimLight.light = SCNLight()
+        rimLight.light?.type = .directional
+        rimLight.light?.color = UIColor(white: 0.8, alpha: 1.0)
+        rimLight.light?.intensity = 400
+        rimLight.position = SCNVector3(-5, 3, 5)
+        rimLight.eulerAngles = SCNVector3(-Float.pi/6, -Float.pi/4, 0)
+        scene.rootNode.addChildNode(rimLight)
+        
+        // 启用环境光遮蔽（如果支持）
+        scene.lightingEnvironment.intensity = 1.0
     }
     
     private func createPot() {
@@ -204,27 +221,46 @@ class GameSceneController: NSObject {
         node.eulerAngles = SCNVector3(item.rotation)
     }
     
-    /// 颠锅效果
+    /// 颠锅效果 - 给所有物品施加向上的爆发力
     func performShake() {
-        // 给所有物品施加随机冲量
-        for (_, node) in itemNodes {
-            let randomX = Float.random(in: -3...3)
-            let randomY = Float.random(in: 2...5)
-            let randomZ = Float.random(in: -3...3)
+        guard let gameSession = gameSession else { return }
+        
+        // 获取需要颠锅的物品
+        let itemsToShake = gameSession.getItemsForShake()
+        
+        for item in itemsToShake {
+            guard let node = itemNodes[item.id] else { continue }
             
+            // 重置物理状态
+            node.physicsBody?.velocity = SCNVector3(0, 0, 0)
+            node.physicsBody?.angularVelocity = SCNVector4(0, 0, 0, 0)
+            
+            // 向上的爆发力
+            let upwardForce = Float.random(in: 8...15) // 更大的向上力
+            let randomX = Float.random(in: -4...4)
+            let randomZ = Float.random(in: -4...4)
+            
+            // 应用冲量
             node.physicsBody?.applyForce(
-                SCNVector3(randomX, randomY, randomZ),
+                SCNVector3(randomX, upwardForce, randomZ),
                 at: SCNVector3(0, 0, 0),
                 asImpulse: true
             )
             
             // 添加随机旋转
-            let torqueX = Float.random(in: -1...1)
-            let torqueY = Float.random(in: -1...1)
-            let torqueZ = Float.random(in: -1...1)
+            let torqueX = Float.random(in: -2...2)
+            let torqueY = Float.random(in: -2...2)
+            let torqueZ = Float.random(in: -2...2)
             node.physicsBody?.applyTorque(
                 SCNVector4(torqueX, torqueY, torqueZ, 1),
                 asImpulse: true
+            )
+            
+            // 更新物品的目标位置（用于后续同步）
+            item.position = SIMD3<Float>(
+                node.position.x + randomX * 0.1,
+                min(node.position.y + upwardForce * 0.1, 4.0), // 限制高度
+                node.position.z + randomZ * 0.1
             )
         }
         

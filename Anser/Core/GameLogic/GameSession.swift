@@ -231,11 +231,20 @@ class GameSession {
         
         shakeCount += 1
         
-        // 重新随机化物品位置
+        // 重新随机化物品位置（用于UI同步，实际位置由物理引擎控制）
         for item in sceneItems where !item.isEliminated {
-            item.position = randomPosition()
+            // 设置一个临时的目标位置，物理引擎会尝试达到这个位置
+            let newPosition = randomPosition()
+            item.position = newPosition
+            
+            // 随机化旋转
             item.rotation = randomRotation()
         }
+    }
+    
+    /// 获取需要颠锅的物品列表
+    func getItemsForShake() -> [GameItem] {
+        return sceneItems.filter { !$0.isEliminated }
     }
     
     // MARK: - 胜负判定
