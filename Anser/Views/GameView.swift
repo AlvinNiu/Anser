@@ -296,15 +296,27 @@ struct GameView: View {
     private func handleItemSelected(_ item: GameItem) {
         guard gameSession.selectItem(item) else { return }
         
-        // 更新场景
+        // 更新选中的物品（添加到待消除栏）
         sceneController.updateItem(item)
         
         // 播放音效
         AudioManager.shared.playEffect(.select)
         
-        // 如果消除发生，播放消除音效
-        if gameSession.checkWinCondition() {
+        // 检查是否有物品被消除
+        let eliminatedItems = gameSession.getEliminatedItems()
+        if !eliminatedItems.isEmpty {
+            // 播放消除音效
             AudioManager.shared.playEffect(.eliminate)
+            
+            // 更新所有被消除的物品（从场景中移除）
+            for eliminatedItem in eliminatedItems {
+                sceneController.updateItem(eliminatedItem)
+            }
+        }
+        
+        // 检查胜利条件
+        if gameSession.checkWinCondition() {
+            AudioManager.shared.playEffect(.win)
         }
     }
     
@@ -393,20 +405,35 @@ struct TraySlotView: View {
     
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 12)
-                .fill(isActive ? item?.type.color.opacity(0.3) ?? Color.gray.opacity(0.2) : Color.gray.opacity(0.1))
+            // 背景
+            RoundedRectangle(cornerRadius: 16)
+                .fill(isActive ? (item?.type.color ?? Color.gray).opacity(0.2) : Color.gray.opacity(0.1))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(isWarning ? Color.red : Color.gray.opacity(0.3), lineWidth: isWarning ? 3 : 2)
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(isWarning ? Color.red : (isActive ? item?.type.color ?? Color.gray : Color.gray.opacity(0.3)), 
+                               lineWidth: isWarning ? 3 : (isActive ? 3 : 2))
                 )
             
             if let item = item {
-                Text(String(describing: item.type).prefix(1).uppercased())
+                // 显示物品图标
+                ZStack {
+                    Circle()
+                        .fill(item.type.color.opacity(0.3))
+                        .frame(width: 44, height: 44)
+                    
+                    Text(item.type.displayName.prefix(1))
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundStyle(item.type.color)
+                }
+            } else {
+                // 空槽位显示
+                Image(systemName: "square.dashed")
                     .font(.title2)
-                    .fontWeight(.bold)
-                    .foregroundStyle(item.type.color)
+                    .foregroundStyle(.gray.opacity(0.5))
             }
         }
+        .frame(width: 70, height: 70)
     }
 }
 

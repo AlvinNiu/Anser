@@ -44,8 +44,8 @@ class ShakeDetector {
     
     // MARK: - 配置参数
     
-    /// 触发阈值（G力）
-    var shakeThreshold: Double = 1.5
+    /// 触发阈值（G力）- 降低阈值使其更容易触发
+    var shakeThreshold: Double = 1.2
     
     /// 冷却时间（秒）
     var cooldownDuration: TimeInterval = 2.0

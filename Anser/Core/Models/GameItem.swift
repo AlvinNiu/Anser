@@ -141,9 +141,12 @@ class EliminationTray {
     
     /// 消除指定类型的物品
     private func eliminateItems(of type: ItemType) {
+        // 标记要消除的物品
+        let itemsToEliminate = items.filter { $0.type == type }
+        itemsToEliminate.forEach { $0.isEliminated = true }
+        
+        // 从待消除栏中移除
         items.removeAll { $0.type == type }
-        // 被消除的物品标记为已消除
-        // 注意：实际标记在GameSession中处理
     }
     
     /// 清空待消除栏

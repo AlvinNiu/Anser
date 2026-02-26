@@ -211,10 +211,18 @@ class GameSession {
         // 增加消除计数
         eliminationCount += 1
         
+        // 更新统计数据
+        GameDataManager.shared.incrementEliminations()
+        
         // 检查胜利条件
         if checkWinCondition() {
             winGame()
         }
+    }
+    
+    /// 获取刚被消除的物品列表（用于更新UI）
+    func getEliminatedItems() -> [GameItem] {
+        return sceneItems.filter { $0.isEliminated }
     }
     
     /// 触发颠锅

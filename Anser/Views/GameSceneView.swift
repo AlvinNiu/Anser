@@ -79,23 +79,58 @@ class GameSceneController: NSObject {
     }
     
     private func createPot() {
-        // 创建大锅（半球形）
+        // 创建大锅（使用球体内部作为容器）
         let potGeometry = SCNSphere(radius: 5)
-        potGeometry.segmentCount = 32
+        potGeometry.segmentCount = 48
         
-        // 只保留下半球
-        potGeometry.firstMaterial?.diffuse.contents = UIColor.systemGray4
-        potGeometry.firstMaterial?.roughness.contents = 0.4
+        // 设置材质 - 使用明显的锅颜色
+        let material = SCNMaterial()
+        material.diffuse.contents = UIColor(red: 0.4, green: 0.3, blue: 0.2, alpha: 1.0) // 铜锅色
+        material.specular.contents = UIColor(white: 0.3, alpha: 1.0)
+        material.roughness.contents = 0.6
+        material.metalness.contents = 0.3
+        material.isDoubleSided = true // 渲染双面
+        potGeometry.firstMaterial = material
         
         let potNode = SCNNode(geometry: potGeometry)
         potNode.position = SCNVector3(0, -2, 0)
         potNode.scale = SCNVector3(1, 0.6, 1)
         
-        // 添加物理体
-        potNode.physicsBody = SCNPhysicsBody(type: .static, shape: nil)
+        // 旋转使半球开口朝上（球体的下半部分）
+        potNode.eulerAngles = SCNVector3(Float.pi, 0, 0)
+        
+        // 添加物理体 - 使用凹面形状作为容器
+        let physicsShape = SCNPhysicsShape(geometry: potGeometry, options: [
+            .type: SCNPhysicsShape.ShapeType.concavePolyhedron
+        ])
+        potNode.physicsBody = SCNPhysicsBody(type: .static, shape: physicsShape)
+        potNode.physicsBody?.friction = 0.5
+        potNode.physicsBody?.restitution = 0.3
         
         scene.rootNode.addChildNode(potNode)
         self.potNode = potNode
+        
+        // 添加锅边（可见的锅沿）
+        createPotRim()
+    }
+    
+    private func createPotRim() {
+        // 创建锅边圆环
+        let rimRadius: CGFloat = 5.0
+        let rimThickness: CGFloat = 0.3
+        
+        let rimGeometry = SCNTorus(ringRadius: rimRadius, pipeRadius: rimThickness)
+        let rimMaterial = SCNMaterial()
+        rimMaterial.diffuse.contents = UIColor(red: 0.5, green: 0.35, blue: 0.2, alpha: 1.0)
+        rimMaterial.metalness.contents = 0.5
+        rimMaterial.roughness.contents = 0.4
+        rimGeometry.firstMaterial = rimMaterial
+        
+        let rimNode = SCNNode(geometry: rimGeometry)
+        rimNode.position = SCNVector3(0, 1, 0) // 锅的顶部边缘
+        rimNode.eulerAngles = SCNVector3(Float.pi / 2, 0, 0) // 水平放置
+        
+        scene.rootNode.addChildNode(rimNode)
     }
     
     // MARK: - 物品管理
@@ -116,31 +151,57 @@ class GameSceneController: NSObject {
         // 创建几何体（根据类型）
         let geometry = createGeometry(for: item.type)
         
-        // 设置材质
-        geometry.firstMaterial?.diffuse.contents = UIColor(item.type.color)
-        geometry.firstMaterial?.roughness.contents = 0.3
+        // 设置材质 - 更鲜艳的颜色和更好的视觉效果
+        let material = SCNMaterial()
+        let baseColor = UIColor(item.type.color)
+        material.diffuse.contents = baseColor
+        material.specular.contents = UIColor.white
+        material.roughness.contents = 0.3
+        material.metalness.contents = 0.1
+        material.shininess = 0.4
+        geometry.firstMaterial = material
         
-        let node = SCNNode(geometry: geometry)
-        node.name = item.nodeName
-        node.position = SCNVector3(item.position)
-        node.eulerAngles = SCNVector3(item.rotation)
-        node.scale = SCNVector3(item.scale, item.scale, item.scale)
+        // 创建容器节点
+        let containerNode = SCNNode()
+        containerNode.name = item.nodeName
+        containerNode.position = SCNVector3(item.position)
+        containerNode.eulerAngles = SCNVector3(item.rotation)
+        
+        // 物品几何体节点
+        let geometryNode = SCNNode(geometry: geometry)
+        geometryNode.scale = SCNVector3(item.scale, item.scale, item.scale)
+        containerNode.addChildNode(geometryNode)
+        
+        // 添加文字标签（便于识别）
+        let textGeometry = SCNText(string: String(describing: item.type).prefix(1).uppercased(), extrusionDepth: 0.1)
+        textGeometry.font = UIFont.boldSystemFont(ofSize: 1.0)
+        textGeometry.firstMaterial?.diffuse.contents = UIColor.white
+        textGeometry.firstMaterial?.specular.contents = UIColor.white
+        
+        let textNode = SCNNode(geometry: textGeometry)
+        // 计算文字中心点使其居中
+        let (min, max) = textGeometry.boundingBox
+        let textWidth = max.x - min.x
+        let textHeight = max.y - min.y
+        textNode.position = SCNVector3(-textWidth/2, -textHeight/2, 0.6)
+        textNode.scale = SCNVector3(0.3, 0.3, 0.3)
+        containerNode.addChildNode(textNode)
         
         // 添加物理体
         let physicsBody = SCNPhysicsBody(type: .dynamic, shape: nil)
         physicsBody.mass = 0.5
         physicsBody.friction = 0.5
         physicsBody.restitution = 0.3
-        node.physicsBody = physicsBody
+        containerNode.physicsBody = physicsBody
         
         // 添加入场动画
-        node.scale = SCNVector3(0, 0, 0)
-        let scaleAction = SCNAction.scale(to: CGFloat(item.scale), duration: 0.3)
+        containerNode.scale = SCNVector3(0, 0, 0)
+        let scaleAction = SCNAction.scale(to: 1.0, duration: 0.3)
         scaleAction.timingMode = .easeOut
-        node.runAction(scaleAction)
+        containerNode.runAction(scaleAction)
         
-        scene.rootNode.addChildNode(node)
-        itemNodes[item.id] = node
+        scene.rootNode.addChildNode(containerNode)
+        itemNodes[item.id] = containerNode
     }
     
     /// 根据类型创建几何体
