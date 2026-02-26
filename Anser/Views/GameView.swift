@@ -187,7 +187,8 @@ struct GameView: View {
                     cooldown: shakeDetector.cooldownProgress,
                     themeColor: theme.themeAccentColor,
                     onTap: {
-                        performShake()
+                        // 使用 ShakeDetector 的手动触发，它会处理冷却
+                        shakeDetector.triggerManualShake()
                     }
                 )
             } else {
@@ -321,8 +322,6 @@ struct GameView: View {
     }
     
     private func performShake() {
-        guard !shakeDetector.isOnCooldown || gameData.gameSettings.useButtonInsteadOfShake else { return }
-        
         // 触发游戏逻辑中的颠锅
         gameSession.triggerShake()
         

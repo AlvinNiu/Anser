@@ -44,8 +44,9 @@ class ShakeDetector {
     
     // MARK: - 配置参数
     
-    /// 触发阈值（G力）- 降低阈值使其更容易触发
-    var shakeThreshold: Double = 1.2
+    /// 触发阈值（G力）- 进一步降低阈值使其更容易触发
+    /// 正常重力为 1.0，轻微摇晃约为 1.5-2.0，剧烈摇晃为 3.0+
+    var shakeThreshold: Double = 1.5
     
     /// 冷却时间（秒）
     var cooldownDuration: TimeInterval = 2.0
@@ -106,15 +107,19 @@ class ShakeDetector {
         // 检查是否在冷却中
         guard !isOnCooldown else { return }
         
-        // 计算总G力
+        // 计算总G力（包括重力）
         let magnitude = sqrt(
             acceleration.x * acceleration.x +
             acceleration.y * acceleration.y +
             acceleration.z * acceleration.z
         )
         
-        let gForce = magnitude / 9.8
+        // 计算纯加速度（减去重力1.0）
+        let gForce = magnitude
         let threshold = shakeThreshold * sensitivityMultiplier
+        
+        // 调试输出（真机测试时取消注释查看）
+        // print("[ShakeDetector] G-Force: \(String(format: "%.3f", gForce)), Threshold: \(threshold), OnCooldown: \(isOnCooldown)")
         
         // 检测是否超过阈值
         guard gForce >= threshold else { return }
@@ -131,8 +136,10 @@ class ShakeDetector {
             currentMode = .none
         }
         
-        // 触发颠锅
-        triggerShake()
+        // 触发颠锅（在主线程）
+        DispatchQueue.main.async { [weak self] in
+            self?.triggerShake()
+        }
     }
     
     /// 触发颠锅
