@@ -148,44 +148,12 @@ class GameSceneController: NSObject {
     
     /// 创建物品节点
     private func createItemNode(for item: GameItem) {
-        // 创建几何体（根据类型）
-        let geometry = createGeometry(for: item.type)
-        
-        // 设置材质 - 更鲜艳的颜色和更好的视觉效果
-        let material = SCNMaterial()
-        let baseColor = UIColor(item.type.color)
-        material.diffuse.contents = baseColor
-        material.specular.contents = UIColor.white
-        material.roughness.contents = 0.3
-        material.metalness.contents = 0.1
-        material.shininess = 0.4
-        geometry.firstMaterial = material
-        
-        // 创建容器节点
-        let containerNode = SCNNode()
+        // 使用模型工厂创建3D模型
+        let containerNode = ItemModelFactory.createModel(for: item.type)
         containerNode.name = item.nodeName
         containerNode.position = SCNVector3(item.position)
         containerNode.eulerAngles = SCNVector3(item.rotation)
-        
-        // 物品几何体节点
-        let geometryNode = SCNNode(geometry: geometry)
-        geometryNode.scale = SCNVector3(item.scale, item.scale, item.scale)
-        containerNode.addChildNode(geometryNode)
-        
-        // 添加文字标签（便于识别）
-        let textGeometry = SCNText(string: String(describing: item.type).prefix(1).uppercased(), extrusionDepth: 0.1)
-        textGeometry.font = UIFont.boldSystemFont(ofSize: 1.0)
-        textGeometry.firstMaterial?.diffuse.contents = UIColor.white
-        textGeometry.firstMaterial?.specular.contents = UIColor.white
-        
-        let textNode = SCNNode(geometry: textGeometry)
-        // 计算文字中心点使其居中
-        let (min, max) = textGeometry.boundingBox
-        let textWidth = max.x - min.x
-        let textHeight = max.y - min.y
-        textNode.position = SCNVector3(-textWidth/2, -textHeight/2, 0.6)
-        textNode.scale = SCNVector3(0.3, 0.3, 0.3)
-        containerNode.addChildNode(textNode)
+        containerNode.scale = SCNVector3(item.scale, item.scale, item.scale)
         
         // 添加物理体
         let physicsBody = SCNPhysicsBody(type: .dynamic, shape: nil)
@@ -202,37 +170,6 @@ class GameSceneController: NSObject {
         
         scene.rootNode.addChildNode(containerNode)
         itemNodes[item.id] = containerNode
-    }
-    
-    /// 根据类型创建几何体
-    private func createGeometry(for type: ItemType) -> SCNGeometry {
-        switch type {
-        case .apple, .donut, .grape, .lemon:
-            return SCNSphere(radius: 0.6)
-        case .banana:
-            let capsule = SCNCapsule(capRadius: 0.3, height: 1.5)
-            return capsule
-        case .carrot:
-            let cone = SCNCone(topRadius: 0.1, bottomRadius: 0.4, height: 1.2)
-            return cone
-        case .egg:
-            return SCNSphere(radius: 0.5)
-        case .fish:
-            let box = SCNBox(width: 1.2, height: 0.3, length: 0.6, chamferRadius: 0.1)
-            return box
-        case .kiwi:
-            let sphere = SCNSphere(radius: 0.55)
-            return sphere
-        case .hamburger:
-            let cylinder = SCNCylinder(radius: 0.6, height: 0.8)
-            return cylinder
-        case .icecream:
-            let cone = SCNCone(topRadius: 0.4, bottomRadius: 0.1, height: 1.0)
-            return cone
-        case .juice:
-            let cylinder = SCNCylinder(radius: 0.35, height: 1.2)
-            return cylinder
-        }
     }
     
     /// 清除所有物品
