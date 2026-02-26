@@ -96,39 +96,62 @@ class GameSceneController: NSObject {
     }
     
     private func createPot() {
-        // 创建大锅（使用球体内部作为容器）
-        let potGeometry = SCNSphere(radius: 5)
-        potGeometry.segmentCount = 48
+        // 创建锅底 - 实体半球（倒扣）
+        let potRadius: CGFloat = 5.0
         
-        // 设置材质 - 使用明显的锅颜色
-        let material = SCNMaterial()
-        material.diffuse.contents = UIColor(red: 0.4, green: 0.3, blue: 0.2, alpha: 1.0) // 铜锅色
-        material.specular.contents = UIColor(white: 0.3, alpha: 1.0)
-        material.roughness.contents = 0.6
-        material.metalness.contents = 0.3
-        material.isDoubleSided = true // 渲染双面
-        potGeometry.firstMaterial = material
+        // 锅底材质
+        let potMaterial = SCNMaterial()
+        potMaterial.diffuse.contents = UIColor(red: 0.35, green: 0.25, blue: 0.15, alpha: 1.0)
+        potMaterial.specular.contents = UIColor(white: 0.4, alpha: 1.0)
+        potMaterial.roughness.contents = 0.5
+        potMaterial.metalness.contents = 0.4
+        potMaterial.isDoubleSided = true
         
-        let potNode = SCNNode(geometry: potGeometry)
-        potNode.position = SCNVector3(0, -2, 0)
-        potNode.scale = SCNVector3(1, 0.6, 1)
+        // 创建半球形锅底（内部可见）
+        let bowlGeometry = SCNSphere(radius: potRadius)
+        bowlGeometry.segmentCount = 48
+        bowlGeometry.firstMaterial = potMaterial
         
-        // 旋转使半球开口朝上（球体的下半部分）
-        potNode.eulerAngles = SCNVector3(Float.pi, 0, 0)
+        let bowlNode = SCNNode(geometry: bowlGeometry)
+        bowlNode.position = SCNVector3(0, -1.5, 0)
+        bowlNode.scale = SCNVector3(1, 0.7, 1)
+        // 旋转使开口朝上
+        bowlNode.eulerAngles = SCNVector3(Float.pi, 0, 0)
         
-        // 添加物理体 - 使用凹面形状作为容器
-        let physicsShape = SCNPhysicsShape(geometry: potGeometry, options: [
+        // 锅的物理体 - 静态凹面
+        let bowlShape = SCNPhysicsShape(geometry: bowlGeometry, options: [
             .type: SCNPhysicsShape.ShapeType.concavePolyhedron
         ])
-        potNode.physicsBody = SCNPhysicsBody(type: .static, shape: physicsShape)
-        potNode.physicsBody?.friction = 0.5
-        potNode.physicsBody?.restitution = 0.3
+        bowlNode.physicsBody = SCNPhysicsBody(type: .static, shape: bowlShape)
+        bowlNode.physicsBody?.friction = 0.6
+        bowlNode.physicsBody?.restitution = 0.2
+        bowlNode.physicsBody?.categoryBitMask = 1
         
-        scene.rootNode.addChildNode(potNode)
-        self.potNode = potNode
+        scene.rootNode.addChildNode(bowlNode)
+        self.potNode = bowlNode
         
-        // 添加锅边（可见的锅沿）
+        // 添加锅边
         createPotRim()
+        
+        // 添加隐形底部平面，防止物品掉出
+        createBottomPlane()
+    }
+    
+    private func createBottomPlane() {
+        // 创建一个隐形的底部，防止物品从锅底掉出去
+        let plane = SCNPlane(width: 8, height: 8)
+        let planeNode = SCNNode(geometry: plane)
+        planeNode.position = SCNVector3(0, -4.5, 0)
+        planeNode.eulerAngles = SCNVector3(Float.pi / 2, 0, 0)
+        planeNode.opacity = 0.0 // 完全透明
+        
+        let planeShape = SCNPhysicsShape(geometry: plane, options: nil)
+        let planeBody = SCNPhysicsBody(type: .static, shape: planeShape)
+        planeBody.friction = 0.5
+        planeBody.restitution = 0.1
+        planeNode.physicsBody = planeBody
+        
+        scene.rootNode.addChildNode(planeNode)
     }
     
     private func createPotRim() {
@@ -172,11 +195,15 @@ class GameSceneController: NSObject {
         containerNode.eulerAngles = SCNVector3(item.rotation)
         containerNode.scale = SCNVector3(item.scale, item.scale, item.scale)
         
-        // 添加物理体
-        let physicsBody = SCNPhysicsBody(type: .dynamic, shape: nil)
-        physicsBody.mass = 0.5
-        physicsBody.friction = 0.5
-        physicsBody.restitution = 0.3
+        // 添加物理体 - 使用简单的球形碰撞体以获得更好的性能
+        let sphereShape = SCNPhysicsShape(geometry: SCNSphere(radius: 0.5), options: nil)
+        let physicsBody = SCNPhysicsBody(type: .dynamic, shape: sphereShape)
+        physicsBody.mass = 1.0  // 增加质量
+        physicsBody.friction = 0.6
+        physicsBody.restitution = 0.4  // 弹性
+        physicsBody.damping = 0.5  // 线性阻尼（减缓运动）
+        physicsBody.angularDamping = 0.5  // 角阻尼
+        physicsBody.isAffectedByGravity = true
         containerNode.physicsBody = physicsBody
         
         // 添加入场动画
@@ -221,47 +248,42 @@ class GameSceneController: NSObject {
         node.eulerAngles = SCNVector3(item.rotation)
     }
     
-    /// 颠锅效果 - 给所有物品施加向上的爆发力
+    /// 颠锅效果 - 给所有物品施加巨大的爆发力
     func performShake() {
-        guard let gameSession = gameSession else { return }
+        print("[GameSceneView] Performing shake with \(itemNodes.count) items")
         
-        // 获取需要颠锅的物品
-        let itemsToShake = gameSession.getItemsForShake()
-        
-        for item in itemsToShake {
-            guard let node = itemNodes[item.id] else { continue }
+        for (_, node) in itemNodes {
+            guard let physicsBody = node.physicsBody else { continue }
             
-            // 重置物理状态
-            node.physicsBody?.velocity = SCNVector3(0, 0, 0)
-            node.physicsBody?.angularVelocity = SCNVector4(0, 0, 0, 0)
+            // 通过应用微小脉冲唤醒物理体
+            physicsBody.applyForce(SCNVector3(0.01, 0.01, 0.01), at: SCNVector3Zero, asImpulse: true)
             
-            // 向上的爆发力
-            let upwardForce = Float.random(in: 8...15) // 更大的向上力
-            let randomX = Float.random(in: -4...4)
-            let randomZ = Float.random(in: -4...4)
+            // 重置当前速度
+            physicsBody.velocity = SCNVector3(0, 0, 0)
+            physicsBody.angularVelocity = SCNVector4(0, 0, 0, 0)
             
-            // 应用冲量
-            node.physicsBody?.applyForce(
+            // 巨大的向上爆发力
+            let upwardForce: Float = 25.0  // 非常大的向上力
+            let randomX = Float.random(in: -10...10)
+            let randomZ = Float.random(in: -10...10)
+            
+            // 应用冲量（impulse = 瞬间力）
+            physicsBody.applyForce(
                 SCNVector3(randomX, upwardForce, randomZ),
                 at: SCNVector3(0, 0, 0),
                 asImpulse: true
             )
             
             // 添加随机旋转
-            let torqueX = Float.random(in: -2...2)
-            let torqueY = Float.random(in: -2...2)
-            let torqueZ = Float.random(in: -2...2)
-            node.physicsBody?.applyTorque(
+            let torqueX = Float.random(in: -5...5)
+            let torqueY = Float.random(in: -5...5)
+            let torqueZ = Float.random(in: -5...5)
+            physicsBody.applyTorque(
                 SCNVector4(torqueX, torqueY, torqueZ, 1),
                 asImpulse: true
             )
             
-            // 更新物品的目标位置（用于后续同步）
-            item.position = SIMD3<Float>(
-                node.position.x + randomX * 0.1,
-                min(node.position.y + upwardForce * 0.1, 4.0), // 限制高度
-                node.position.z + randomZ * 0.1
-            )
+            print("[GameSceneView] Applied force: (\(randomX), \(upwardForce), \(randomZ)) to node")
         }
         
         // 相机震动效果
@@ -322,6 +344,13 @@ struct GameSceneView: UIViewRepresentable {
         sceneView.backgroundColor = .clear
         sceneView.antialiasingMode = .multisampling4X
         sceneView.preferredFramesPerSecond = 60
+        
+        // 调试：显示物理边界（开发时使用）
+        // sceneView.debugOptions = [.showPhysicsShapes]
+        
+        // 确保物理模拟运行
+        controller.scene.physicsWorld.gravity = SCNVector3(0, -9.8, 0)
+        controller.scene.physicsWorld.speed = 1.0
         
         // 添加点击手势
         let tapGesture = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleTap(_:)))
