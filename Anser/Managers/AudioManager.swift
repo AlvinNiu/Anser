@@ -74,7 +74,8 @@ class AudioManager {
     private func preloadEffects() {
         // 在实际应用中，这里会加载音频文件
         // 为了演示，我们只是初始化播放器
-        for effect in [SoundEffect.select, .eliminate, .shake, .win, .lose, .button] {
+        for _ in [SoundEffect.select, .eliminate, .shake, .win, .lose, .button] {
+            // 预加载音效（资源就绪后启用）
             // effectPlayers[effect] = createPlayer(for: effect)
         }
     }

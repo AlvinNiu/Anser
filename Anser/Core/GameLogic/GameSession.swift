@@ -194,8 +194,8 @@ class GameSession {
         }
         
         // 检查待消除栏是否已满（失败条件之一）
-        if tray.isFull && !didEliminate {
-            checkLoseCondition()
+        if tray.isFull && !didEliminate && checkLoseCondition() {
+            loseGame()
         }
         
         return true

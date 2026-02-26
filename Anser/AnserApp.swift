@@ -25,8 +25,8 @@ struct AnserApp: App {
 // MARK: - App Delegate
 class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
-        // 配置音频会话
-        AudioManager.shared
+        // 配置音频会话（触发单例初始化）
+        _ = AudioManager.shared
         
         return true
     }

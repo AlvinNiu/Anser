@@ -118,12 +118,12 @@ class ThemeEngine: ThemeEngineProtocol {
         
         // 设置定时器检查日期变化（每小时检查一次）
         Timer.scheduledTimer(withTimeInterval: 3600, repeats: true) { [weak self] _ in
-            self?.checkAndUpdateTheme()
+            _ = self?.checkAndUpdateTheme()
         }
     }
     
     @objc private func handleAppDidBecomeActive() {
-        checkAndUpdateTheme()
+        _ = checkAndUpdateTheme()
     }
     
     deinit {

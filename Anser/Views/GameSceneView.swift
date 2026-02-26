@@ -215,9 +215,6 @@ class GameSceneController: NSObject {
         case .carrot:
             let cone = SCNCone(topRadius: 0.1, bottomRadius: 0.4, height: 1.2)
             return cone
-        case .donut:
-            let torus = SCNTorus(ringRadius: 0.5, pipeRadius: 0.2)
-            return torus
         case .egg:
             return SCNSphere(radius: 0.5)
         case .fish:
