@@ -24,20 +24,17 @@ class USDZModelLoader {
         
         // 尝试加载USDZ文件
         if let usdzNode = loadUSDZFile(named: type.usdzFileName) {
-            // 调整模型大小和位置
-            let wrapperNode = SCNNode()
-            wrapperNode.addChildNode(usdzNode)
-            
             // 归一化大小
             normalizeModelSize(usdzNode)
             
-            modelCache[type] = wrapperNode
-            return wrapperNode.copy() as! SCNNode
+            // 缓存并返回复制
+            modelCache[type] = usdzNode
+            return usdzNode.copy() as! SCNNode
         }
         
-        // 如果没有USDZ文件，使用程序化模型
-        print("[USDZModelLoader] USDZ not found for \(type), using procedural model")
-        return ItemModelFactory.createModel(for: type)
+        // 如果没有USDZ文件，使用简化方案（彩色球体+文字）
+        print("[USDZModelLoader] USDZ not found for \(type), using simple model")
+        return SimpleItemFactory.createItem(for: type)
     }
     
     /// 加载USDZ文件
@@ -49,7 +46,17 @@ class USDZModelLoader {
         
         do {
             let scene = try SCNScene(url: url, options: [.checkConsistency: true])
-            return scene.rootNode
+            
+            // 创建包装节点（不能直接使用 scene.rootNode）
+            let wrapperNode = SCNNode()
+            wrapperNode.name = "usdz_\(filename)"
+            
+            // 复制 rootNode 的所有子节点到包装节点
+            for childNode in scene.rootNode.childNodes {
+                wrapperNode.addChildNode(childNode.copy() as! SCNNode)
+            }
+            
+            return wrapperNode
         } catch {
             print("[USDZModelLoader] Failed to load \(filename).usdz: \(error)")
             return nil

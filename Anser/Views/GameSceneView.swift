@@ -188,20 +188,15 @@ class GameSceneController: NSObject {
     
     /// 创建物品节点
     private func createItemNode(for item: GameItem) {
-        // 选择模型方案（四选一）：
-        // 1. SimpleItemFactory - 彩色球体+文字标签（最可靠，推荐）
-        // 2. EmojiItemFactory - Emoji贴图（需验证渲染）
-        // 3. USDZModelLoader - 真实USDZ模型（需要有模型文件）
-        // 4. ItemModelFactory - 程序化几何体（复杂形状）
-        
+        // 优先使用USDZ真实模型，如果没有则回退到简化方案
         let containerNode: SCNNode
         
-        // 默认使用简化方案（彩色球体+中文标签，最可靠）
-        containerNode = SimpleItemFactory.createItem(for: item.type)
+        // 尝试加载USDZ模型（当前只有apple.usdz，其他会回退）
+        containerNode = USDZModelLoader.loadModel(for: item.type)
         
-        // 其他方案（取消注释切换）：
+        // 备用方案（如需切换可取消注释）：
+        // containerNode = SimpleItemFactory.createItem(for: item.type)
         // containerNode = EmojiItemFactory.createEmojiItem(for: item.type)
-        // containerNode = USDZModelLoader.loadModel(for: item.type)
         // containerNode = ItemModelFactory.createModel(for: item.type)
         
         containerNode.name = item.nodeName
