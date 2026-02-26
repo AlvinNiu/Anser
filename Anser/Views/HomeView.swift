@@ -385,7 +385,7 @@ struct SettingsView: View {
                             Slider(
                                 value: .init(
                                     get: { gameData.gameSettings.shakeSensitivity },
-                                    set: { gameData.updateSettings { $0.shakeSensitivity = $1 } }
+                                    set: { newValue in gameData.updateSettings { $0.shakeSensitivity = newValue } }
                                 ),
                                 in: 0.5...2.0,
                                 step: 0.1

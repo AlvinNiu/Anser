@@ -143,7 +143,7 @@ struct ThemeLibrary {
             name: "果汁吧",
             category: .daily,
             description: "清凉解渴的果汁特调",
-            itemTypes: [.juice, .apple, .orange, .grape, .lemon, .kiwi],
+            itemTypes: [.juice, .apple, .carrot, .grape, .lemon, .kiwi],
             backgroundColor: "#F0E68C",
             accentColor: "#DAA520",
             unlockGooseID: "goose_juice",
@@ -207,7 +207,4 @@ extension Color {
     }
 }
 
-// MARK: - Placeholder for ItemType extension
-extension ItemType {
-    static let orange = ItemType.lemon  // 临时占位
-}
+

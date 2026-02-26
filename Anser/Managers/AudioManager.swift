@@ -7,6 +7,7 @@
 
 import Foundation
 import AVFoundation
+import UIKit
 
 /// 音效类型
 enum SoundEffect: String {

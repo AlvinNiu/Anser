@@ -18,7 +18,7 @@ enum ShakeMode {
 
 /// 颠锅检测器
 @Observable
-class ShakeDetector: ObservableObject {
+class ShakeDetector {
     /// 单例
     static let shared = ShakeDetector()
     

@@ -10,7 +10,7 @@ import SceneKit
 
 /// 游戏场景控制器
 @Observable
-class GameSceneController: NSObject, ObservableObject {
+class GameSceneController: NSObject {
     /// SceneKit场景
     let scene: SCNScene
     
@@ -146,7 +146,7 @@ class GameSceneController: NSObject, ObservableObject {
     /// 根据类型创建几何体
     private func createGeometry(for type: ItemType) -> SCNGeometry {
         switch type {
-        case .apple, .orange, .grape, .lemon:
+        case .apple, .donut, .grape, .lemon:
             return SCNSphere(radius: 0.6)
         case .banana:
             let capsule = SCNCapsule(capRadius: 0.3, height: 1.5)
@@ -277,7 +277,7 @@ class GameSceneController: NSObject, ObservableObject {
 // MARK: - SwiftUI 包装
 
 struct GameSceneView: UIViewRepresentable {
-    @ObservedObject var controller: GameSceneController
+    var controller: GameSceneController
     
     func makeUIView(context: Context) -> SCNView {
         let sceneView = SCNView()
