@@ -320,13 +320,17 @@ class GameSceneController: NSObject {
         let hitResults = view.hitTest(point, options: [.boundingBoxOnly: false])
         
         for result in hitResults {
-            if let nodeName = result.node.name,
-               nodeName.hasPrefix("item_") {
-                // 找到对应的物品
-                if let item = gameSession?.sceneItems.first(where: { $0.nodeName == nodeName }) {
-                    onItemSelected?(item)
-                    break
+            // 递归向上查找以 "item_" 开头的节点
+            var currentNode: SCNNode? = result.node
+            while let node = currentNode {
+                if let nodeName = node.name, nodeName.hasPrefix("item_") {
+                    // 找到对应的物品
+                    if let item = gameSession?.sceneItems.first(where: { $0.nodeName == nodeName }) {
+                        onItemSelected?(item)
+                        return
+                    }
                 }
+                currentNode = node.parent
             }
         }
     }
